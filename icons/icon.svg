@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#2563eb"/>
+  <!-- Fuel pump body -->
+  <rect x="120" y="160" width="180" height="230" rx="16" fill="#ffffff"/>
+  <!-- Fuel gauge/screen on pump -->
+  <rect x="148" y="188" width="124" height="80" rx="8" fill="#2563eb" opacity="0.2"/>
+  <!-- Fuel drop icon in gauge -->
+  <path d="M210 210 Q210 200 220 195 Q230 200 230 210 Q230 225 220 232 Q210 225 210 210Z" fill="#2563eb" opacity="0.6"/>
+  <!-- Pump base -->
+  <rect x="100" y="380" width="220" height="24" rx="8" fill="#ffffff"/>
+  <!-- Nozzle arm -->
+  <path d="M300 200 L340 200 L340 160 L380 160 L380 180" stroke="#ffffff" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Nozzle -->
+  <path d="M380 175 L380 240 L360 260" stroke="#ffffff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Hose curve -->
+  <path d="M360 260 Q340 280 350 300" stroke="#ffffff" stroke-width="12" stroke-linecap="round" fill="none"/>
+</svg>

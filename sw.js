@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fuel-log-v4';
+const CACHE_NAME = 'fuel-log-v5';
 const ASSETS = [
   './',
   'index.html',

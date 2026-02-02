@@ -77,6 +77,7 @@ function resetEntryForm() {
   document.getElementById('entry-vehicle').value = settings.defaultVehicle;
   document.getElementById('entry-odometer').value = '';
   document.getElementById('entry-fuel').value = '';
+  document.getElementById('entry-ppl').value = '';
   document.getElementById('entry-cost').value = '';
   document.getElementById('entry-fuel-type').value = lastFuelType;
   document.getElementById('entry-location').value = '';
@@ -86,6 +87,8 @@ function resetEntryForm() {
 function updateEntryFormLabels() {
   const settings = loadSettings();
   document.getElementById('entry-fuel-label').textContent = `Fuel (${settings.fuelUnit})`;
+  const unitSingular = settings.fuelUnit === 'litres' ? 'litre' : 'gallon';
+  document.getElementById('entry-ppl-label').textContent = `Cost/${unitSingular} (${settings.currency})`;
   document.getElementById('entry-cost-label').textContent = `Cost (${settings.currency})`;
 }
 
@@ -101,6 +104,7 @@ async function loadEntryForEdit(id) {
   document.getElementById('entry-vehicle').value = entry.vehicle || '';
   document.getElementById('entry-odometer').value = entry.odometer;
   document.getElementById('entry-fuel').value = entry.fuelAmount;
+  document.getElementById('entry-ppl').value = entry.fuelAmount ? (entry.cost / entry.fuelAmount).toFixed(3) : '';
   document.getElementById('entry-cost').value = entry.cost;
   document.getElementById('entry-fuel-type').value = entry.fuelType || 'petrol';
   document.getElementById('entry-location').value = entry.location || '';
@@ -108,6 +112,41 @@ async function loadEntryForEdit(id) {
 }
 
 function setupEntryForm() {
+  const fuelEl = document.getElementById('entry-fuel');
+  const pplEl = document.getElementById('entry-ppl');
+  const costEl = document.getElementById('entry-cost');
+
+  // Fuel changed: if cost/litre is set, calculate total cost
+  fuelEl.addEventListener('input', () => {
+    const fuel = Number(fuelEl.value);
+    const ppl = Number(pplEl.value);
+    if (fuel && ppl) {
+      costEl.value = (fuel * ppl).toFixed(2);
+    }
+  });
+
+  // Cost/litre changed: if fuel is set, calculate total cost;
+  // if only total cost is set, calculate fuel
+  pplEl.addEventListener('input', () => {
+    const ppl = Number(pplEl.value);
+    const fuel = Number(fuelEl.value);
+    const cost = Number(costEl.value);
+    if (ppl && fuel) {
+      costEl.value = (fuel * ppl).toFixed(2);
+    } else if (ppl && cost) {
+      fuelEl.value = (cost / ppl).toFixed(2);
+    }
+  });
+
+  // Cost changed: if cost/litre is set, calculate fuel
+  costEl.addEventListener('input', () => {
+    const cost = Number(costEl.value);
+    const ppl = Number(pplEl.value);
+    if (cost && ppl) {
+      fuelEl.value = (cost / ppl).toFixed(2);
+    }
+  });
+
   const form = document.getElementById('entry-form');
   form.addEventListener('submit', async (e) => {
     e.preventDefault();

@@ -367,7 +367,7 @@ function init() {
   setupSettings();
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js');
+    navigator.serviceWorker.register('sw.js');
   }
 
   window.addEventListener('hashchange', navigate);

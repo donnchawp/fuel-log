@@ -1,7 +1,7 @@
 {
   "name": "Fuel Log",
   "short_name": "Fuel Log",
-  "start_url": "/",
+  "start_url": ".",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#2563eb",

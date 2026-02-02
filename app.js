@@ -1,6 +1,6 @@
 // app.js
-import { loadSettings, applyTheme, initThemeListener } from './settings.js';
-import { addEntry, updateEntry, getEntry, getAllEntries, deleteEntries } from './db.js';
+import { loadSettings, saveSettings, applyTheme, initThemeListener } from './settings.js';
+import { addEntry, updateEntry, getEntry, getAllEntries, deleteEntries, estimateStorageUsage } from './db.js';
 import { exportJSON, exportCSV, parseJSONImport, parseCSVImport, getExportEntries, importEntries } from './import-export.js';
 
 const routes = {
@@ -29,6 +29,11 @@ function navigate() {
   // Handle history screen
   if (path === '/history') {
     renderHistory();
+  }
+
+  // Handle settings screen
+  if (path === '/settings') {
+    loadSettingsScreen();
   }
 
   // Handle entry screen with edit parameter
@@ -307,6 +312,42 @@ function setupImportExport() {
   });
 }
 
+// ===== Settings Screen =====
+async function loadSettingsScreen() {
+  const settings = loadSettings();
+  document.getElementById('setting-vehicle').value = settings.defaultVehicle;
+  document.getElementById('setting-unit').value = settings.fuelUnit;
+  document.getElementById('setting-currency').value = settings.currency;
+  document.getElementById('setting-theme').value = settings.darkMode;
+
+  const usage = await estimateStorageUsage();
+  const el = document.getElementById('storage-usage');
+  if (usage) {
+    const usedKB = (usage.usage / 1024).toFixed(1);
+    const quotaMB = (usage.quota / (1024 * 1024)).toFixed(0);
+    el.textContent = `Storage: ${usedKB} KB used of ${quotaMB} MB`;
+  } else {
+    el.textContent = '';
+  }
+}
+
+function setupSettings() {
+  const fields = ['setting-vehicle', 'setting-unit', 'setting-currency', 'setting-theme'];
+  const keys = ['defaultVehicle', 'fuelUnit', 'currency', 'darkMode'];
+
+  fields.forEach((fieldId, i) => {
+    document.getElementById(fieldId).addEventListener('change', () => {
+      const settings = loadSettings();
+      settings[keys[i]] = document.getElementById(fieldId).value.trim();
+      saveSettings(settings);
+
+      if (keys[i] === 'darkMode') {
+        applyTheme(settings.darkMode);
+      }
+    });
+  });
+}
+
 // Initialize
 function init() {
   const settings = loadSettings();
@@ -316,6 +357,7 @@ function init() {
   setupEntryForm();
   setupHistory();
   setupImportExport();
+  setupSettings();
 
   window.addEventListener('hashchange', navigate);
   navigate();

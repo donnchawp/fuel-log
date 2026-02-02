@@ -12,6 +12,49 @@
   <main id="app">
     <section id="screen-entry" class="screen">
       <h1>Log Fuel</h1>
+      <form id="entry-form" class="mt-16">
+        <input type="hidden" id="entry-id">
+        <div class="form-group">
+          <label for="entry-date">Date &amp; time</label>
+          <input type="datetime-local" id="entry-date">
+        </div>
+        <div class="form-group">
+          <label for="entry-vehicle">Vehicle</label>
+          <input type="text" id="entry-vehicle" placeholder="Vehicle">
+        </div>
+        <div class="form-group">
+          <label for="entry-odometer">Odometer</label>
+          <input type="number" id="entry-odometer" inputmode="numeric" required placeholder="km">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="entry-fuel" id="entry-fuel-label">Fuel (litres)</label>
+            <input type="number" id="entry-fuel" step="0.01" inputmode="decimal" required>
+          </div>
+          <div class="form-group">
+            <label for="entry-cost" id="entry-cost-label">Cost (EUR)</label>
+            <input type="number" id="entry-cost" step="0.01" inputmode="decimal" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="entry-fuel-type">Fuel type</label>
+          <select id="entry-fuel-type">
+            <option value="petrol">Petrol</option>
+            <option value="diesel">Diesel</option>
+            <option value="ev">EV</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="entry-location">Location</label>
+          <input type="text" id="entry-location" placeholder="Station / location">
+        </div>
+        <div class="form-group">
+          <label for="entry-notes">Notes</label>
+          <textarea id="entry-notes" rows="2" placeholder="Notes"></textarea>
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%">Save Entry</button>
+      </form>
     </section>
 
     <section id="screen-history" class="screen">

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fuel-log-v3';
+const CACHE_NAME = 'fuel-log-v4';
 const ASSETS = [
   './',
   'index.html',
@@ -8,6 +8,7 @@ const ASSETS = [
   'settings.js',
   'import-export.js',
   'idb.js',
+  'chart.js',
   'manifest.json',
   'icons/icon-192.png',
   'icons/icon-512.png',

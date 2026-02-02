@@ -139,6 +139,64 @@
       <p id="stats-empty" class="text-center text-secondary mt-16" style="display:none">No entries yet. Start logging fuel to see statistics!</p>
     </section>
 
+    <section id="screen-charts" class="screen">
+      <h1>Charts</h1>
+      <div class="mt-16">
+        <div class="form-group">
+          <select id="charts-vehicle">
+            <option value="all">All vehicles</option>
+          </select>
+        </div>
+      </div>
+      <div id="charts-content">
+        <h2>Fuel-Ups</h2>
+        <div class="chart-grid mt-8">
+          <div class="chart-thumb" data-chart="pricePerL">
+            <canvas></canvas>
+            <span>Price / L</span>
+          </div>
+          <div class="chart-thumb" data-chart="lPer100km">
+            <canvas></canvas>
+            <span>L/100km</span>
+          </div>
+          <div class="chart-thumb" data-chart="fuelCosts">
+            <canvas></canvas>
+            <span>Fuel Costs</span>
+          </div>
+          <div class="chart-thumb" data-chart="lPerFuelup">
+            <canvas></canvas>
+            <span>L / FuelUp</span>
+          </div>
+          <div class="chart-thumb" data-chart="kmBetween">
+            <canvas></canvas>
+            <span>Km btwn FuelUps</span>
+          </div>
+          <div class="chart-thumb" data-chart="daysBetween">
+            <canvas></canvas>
+            <span>Time btwn FuelUps</span>
+          </div>
+        </div>
+        <h2 class="mt-16">Overall</h2>
+        <div class="chart-grid mt-8">
+          <div class="chart-thumb" data-chart="timeOdometer">
+            <canvas></canvas>
+            <span>Time - Odometer</span>
+          </div>
+        </div>
+      </div>
+      <p id="charts-empty" class="text-center text-secondary mt-16" style="display:none">No entries yet. Start logging fuel to see charts!</p>
+    </section>
+
+    <div id="chart-modal" class="chart-modal">
+      <div class="chart-modal-header">
+        <button id="chart-modal-close" class="chart-modal-close" aria-label="Close">&#8592; Back</button>
+        <h2 id="chart-modal-title"></h2>
+      </div>
+      <div class="chart-modal-body">
+        <canvas id="chart-modal-canvas"></canvas>
+      </div>
+    </div>
+
     <section id="screen-settings" class="screen">
       <h1>Settings</h1>
       <div class="mt-16">
@@ -198,6 +256,12 @@
       </svg>
       Stats
     </a>
+    <a href="#/charts">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+      Charts
+    </a>
     <a href="#/settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -208,6 +272,7 @@
 
   <div id="toast" class="toast" aria-live="polite"></div>
 
+  <script src="chart.js"></script>
   <script type="module" src="app.js"></script>
 </body>
 </html>

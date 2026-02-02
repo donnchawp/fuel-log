@@ -8,6 +8,7 @@ const routes = {
   '/history': 'screen-history',
   '/stats': 'screen-stats',
   '/import-export': 'screen-import-export',
+  '/charts': 'screen-charts',
   '/settings': 'screen-settings',
 };
 
@@ -47,6 +48,11 @@ function navigate() {
   // Handle stats screen
   if (path === '/stats') {
     renderStats();
+  }
+
+  // Handle charts screen
+  if (path === '/charts') {
+    renderCharts();
   }
 
   // Handle entry screen with edit parameter
@@ -541,6 +547,306 @@ function setupStats() {
   });
 }
 
+// ===== Charts Screen =====
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+let thumbCharts = [];
+let modalChart = null;
+
+const CHART_DEFS = [
+  {
+    id: 'pricePerL',
+    title: 'Price / L',
+    yLabel: 'Cost/L',
+    compute(entries) {
+      return entries
+        .filter(e => e.fuelAmount > 0)
+        .map(e => ({ x: e.date, y: e.cost / e.fuelAmount }));
+    },
+  },
+  {
+    id: 'lPer100km',
+    title: 'L/100km',
+    yLabel: 'L/100km',
+    compute(entries) {
+      const segments = computeConsumptionSegments(entries);
+      if (segments.length === 0) return [];
+      // Map segments back to dates: each segment ends at a full fill
+      const points = [];
+      let segIdx = 0;
+      let lastFullFillIndex = 0;
+      for (let i = 1; i < entries.length && segIdx < segments.length; i++) {
+        if (entries[i].partialFill) continue;
+        const distance = entries[i].odometer - entries[lastFullFillIndex].odometer;
+        if (distance > 0) {
+          points.push({ x: entries[i].date, y: (segments[segIdx].fuel / segments[segIdx].distance) * 100 });
+          segIdx++;
+        }
+        lastFullFillIndex = i;
+      }
+      return points;
+    },
+  },
+  {
+    id: 'fuelCosts',
+    title: 'Fuel Costs',
+    yLabel: 'Cost',
+    compute(entries) {
+      return entries.map(e => ({ x: e.date, y: e.cost }));
+    },
+  },
+  {
+    id: 'lPerFuelup',
+    title: 'L / FuelUp',
+    yLabel: 'Litres',
+    compute(entries) {
+      return entries.map(e => ({ x: e.date, y: e.fuelAmount }));
+    },
+  },
+  {
+    id: 'kmBetween',
+    title: 'Km btwn FuelUps',
+    yLabel: 'km',
+    compute(entries) {
+      const points = [];
+      for (let i = 1; i < entries.length; i++) {
+        const km = entries[i].odometer - entries[i - 1].odometer;
+        if (km > 0) points.push({ x: entries[i].date, y: km });
+      }
+      return points;
+    },
+  },
+  {
+    id: 'daysBetween',
+    title: 'Time btwn FuelUps',
+    yLabel: 'Days',
+    compute(entries) {
+      const points = [];
+      for (let i = 1; i < entries.length; i++) {
+        const days = (new Date(entries[i].date) - new Date(entries[i - 1].date)) / MS_PER_DAY;
+        points.push({ x: entries[i].date, y: Math.round(days * 10) / 10 });
+      }
+      return points;
+    },
+  },
+  {
+    id: 'timeOdometer',
+    title: 'Time - Odometer',
+    yLabel: 'km',
+    compute(entries) {
+      return entries.map(e => ({ x: e.date, y: e.odometer }));
+    },
+  },
+];
+
+function destroyThumbCharts() {
+  thumbCharts.forEach(c => c.destroy());
+  thumbCharts = [];
+}
+
+function destroyModalChart() {
+  if (modalChart) {
+    modalChart.destroy();
+    modalChart = null;
+  }
+}
+
+function formatChartDate(isoString) {
+  const d = new Date(isoString);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${d.getDate()} ${months[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`;
+}
+
+function createThumbChart(canvas, data) {
+  const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  return new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: data.map(d => formatChartDate(d.x)),
+      datasets: [{
+        data: data.map(d => d.y),
+        borderColor: accentColor,
+        borderWidth: 1.5,
+        pointRadius: 0,
+        tension: 0.3,
+        fill: false,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: {
+        x: { display: false },
+        y: { display: false },
+      },
+      interaction: { enabled: false },
+    },
+  });
+}
+
+function openChart(chartDef, data) {
+  const modal = document.getElementById('chart-modal');
+  const canvas = document.getElementById('chart-modal-canvas');
+  const title = document.getElementById('chart-modal-title');
+
+  destroyModalChart();
+  title.textContent = chartDef.title;
+  modal.classList.add('active');
+  history.pushState({ chartModal: true }, '');
+
+  const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text').trim();
+  const borderColor = getComputedStyle(document.documentElement).getPropertyValue('--border').trim();
+
+  const labels = data.map(d => formatChartDate(d.x));
+  const values = data.map(d => d.y);
+
+  modalChart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: chartDef.title,
+        data: values,
+        borderColor: accentColor,
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBackgroundColor: accentColor,
+        tension: 0.3,
+        fill: false,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label(item) {
+              return `${chartDef.yLabel}: ${item.parsed.y.toFixed(2)}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: { color: textColor, maxTicksLimit: 8, maxRotation: 45 },
+          grid: { color: borderColor },
+        },
+        y: {
+          title: { display: true, text: chartDef.yLabel, color: textColor },
+          ticks: { color: textColor },
+          grid: { color: borderColor },
+        },
+      },
+    },
+  });
+}
+
+function closeChart(popState) {
+  if (!document.getElementById('chart-modal').classList.contains('active')) return;
+  destroyModalChart();
+  document.getElementById('chart-modal').classList.remove('active');
+  if (!popState) history.back();
+}
+
+async function renderCharts() {
+  const allEntries = await getAllEntries(); // newest first
+  const vehicles = await getDistinctVehicles();
+  const vehicleSelect = document.getElementById('charts-vehicle');
+  const content = document.getElementById('charts-content');
+  const empty = document.getElementById('charts-empty');
+
+  // Populate vehicle filter
+  const currentVal = vehicleSelect.value;
+  vehicleSelect.innerHTML = '<option value="all">All vehicles</option>' +
+    vehicles.map(v => `<option value="${v}">${v}</option>`).join('');
+  if (vehicles.includes(currentVal)) vehicleSelect.value = currentVal;
+
+  // Filter and sort entries date ASC
+  let entries = [...allEntries].reverse();
+  const selectedVehicle = vehicleSelect.value;
+  if (selectedVehicle !== 'all') {
+    entries = entries.filter(e => e.vehicle === selectedVehicle);
+  }
+
+  entries.sort((a, b) => {
+    const d = a.date.localeCompare(b.date);
+    return d !== 0 ? d : a.odometer - b.odometer;
+  });
+
+  if (entries.length === 0) {
+    content.style.display = 'none';
+    empty.style.display = 'block';
+    destroyThumbCharts();
+    return;
+  }
+
+  content.style.display = '';
+  empty.style.display = 'none';
+  destroyThumbCharts();
+
+  // Render each thumbnail
+  for (const def of CHART_DEFS) {
+    const thumb = document.querySelector(`.chart-thumb[data-chart="${def.id}"]`);
+    if (!thumb) continue;
+    const canvas = thumb.querySelector('canvas');
+    const data = def.compute(entries);
+    if (data.length < 2) {
+      // Not enough data — clear canvas
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      continue;
+    }
+    thumbCharts.push(createThumbChart(canvas, data));
+  }
+}
+
+function setupCharts() {
+  document.getElementById('charts-vehicle').addEventListener('change', () => {
+    renderCharts();
+  });
+
+  // Click handlers on thumbnails
+  document.querySelectorAll('.chart-thumb').forEach(thumb => {
+    thumb.addEventListener('click', async () => {
+      const chartId = thumb.dataset.chart;
+      const def = CHART_DEFS.find(d => d.id === chartId);
+      if (!def) return;
+
+      const allEntries = await getAllEntries();
+      let entries = [...allEntries].reverse();
+      const selectedVehicle = document.getElementById('charts-vehicle').value;
+      if (selectedVehicle !== 'all') {
+        entries = entries.filter(e => e.vehicle === selectedVehicle);
+      }
+      entries.sort((a, b) => {
+        const d = a.date.localeCompare(b.date);
+        return d !== 0 ? d : a.odometer - b.odometer;
+      });
+
+      const data = def.compute(entries);
+      if (data.length < 2) return;
+      openChart(def, data);
+    });
+  });
+
+  // Close modal
+  document.getElementById('chart-modal-close').addEventListener('click', () => closeChart());
+  document.getElementById('chart-modal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeChart();
+  });
+
+  // Back button closes modal
+  window.addEventListener('popstate', (e) => {
+    if (document.getElementById('chart-modal').classList.contains('active')) {
+      closeChart(true);
+    }
+  });
+}
+
 // ===== Settings Screen =====
 async function loadSettingsScreen() {
   const settings = loadSettings();
@@ -588,6 +894,7 @@ function init() {
   setupImportExport();
   setupSettings();
   setupStats();
+  setupCharts();
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js');

@@ -80,6 +80,7 @@ function resetEntryForm() {
   document.getElementById('entry-ppl').value = '';
   document.getElementById('entry-cost').value = '';
   document.getElementById('entry-fuel-type').value = lastFuelType;
+  document.getElementById('entry-partial').checked = false;
   document.getElementById('entry-location').value = '';
   document.getElementById('entry-notes').value = '';
 }
@@ -107,6 +108,7 @@ async function loadEntryForEdit(id) {
   document.getElementById('entry-ppl').value = entry.fuelAmount ? (entry.cost / entry.fuelAmount).toFixed(3) : '';
   document.getElementById('entry-cost').value = entry.cost;
   document.getElementById('entry-fuel-type').value = entry.fuelType || 'petrol';
+  document.getElementById('entry-partial').checked = !!entry.partialFill;
   document.getElementById('entry-location').value = entry.location || '';
   document.getElementById('entry-notes').value = entry.notes || '';
 }
@@ -162,6 +164,7 @@ function setupEntryForm() {
       cost: Number(document.getElementById('entry-cost').value),
       currency: settings.currency,
       fuelType: document.getElementById('entry-fuel-type').value,
+      partialFill: document.getElementById('entry-partial').checked,
       location: document.getElementById('entry-location').value.trim(),
       notes: document.getElementById('entry-notes').value.trim(),
     };

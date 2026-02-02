@@ -7,7 +7,7 @@ export async function exportJSON(entries) {
 }
 
 export async function exportCSV(entries) {
-  const headers = ['id','date','vehicle','odometer','fuelAmount','fuelUnit','cost','currency','fuelType','location','notes','createdAt','modifiedAt'];
+  const headers = ['id','date','vehicle','odometer','fuelAmount','fuelUnit','cost','currency','fuelType','partialFill','location','notes','createdAt','modifiedAt'];
   const rows = entries.map(e =>
     headers.map(h => csvEscape(String(e[h] ?? ''))).join(',')
   );
@@ -54,6 +54,7 @@ export function parseCSVImport(text) {
     entry.odometer = Number(entry.odometer) || 0;
     entry.fuelAmount = Number(entry.fuelAmount) || 0;
     entry.cost = Number(entry.cost) || 0;
+    entry.partialFill = entry.partialFill === 'true';
     if (!entry.createdAt) entry.createdAt = new Date().toISOString();
     if (!entry.modifiedAt) entry.modifiedAt = new Date().toISOString();
     return entry;

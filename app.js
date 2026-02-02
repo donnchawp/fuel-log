@@ -1,11 +1,12 @@
 // app.js
 import { loadSettings, saveSettings, applyTheme, initThemeListener } from './settings.js';
-import { addEntry, updateEntry, getEntry, getAllEntries, deleteEntries, estimateStorageUsage } from './db.js';
+import { addEntry, updateEntry, getEntry, getAllEntries, deleteEntries, estimateStorageUsage, getDistinctVehicles } from './db.js';
 import { exportJSON, exportCSV, parseJSONImport, parseCSVImport, getExportEntries, importEntries } from './import-export.js';
 
 const routes = {
   '/': 'screen-entry',
   '/history': 'screen-history',
+  '/stats': 'screen-stats',
   '/import-export': 'screen-import-export',
   '/settings': 'screen-settings',
 };
@@ -41,6 +42,11 @@ function navigate() {
   // Handle settings screen
   if (path === '/settings') {
     loadSettingsScreen();
+  }
+
+  // Handle stats screen
+  if (path === '/stats') {
+    renderStats();
   }
 
   // Handle entry screen with edit parameter
@@ -361,6 +367,180 @@ function setupImportExport() {
   });
 }
 
+// ===== Stats Screen =====
+
+function formatDuration(startDate, endDate) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  let years = end.getFullYear() - start.getFullYear();
+  let months = end.getMonth() - start.getMonth();
+  let days = end.getDate() - start.getDate();
+
+  if (days < 0) {
+    months--;
+    const prevMonth = new Date(end.getFullYear(), end.getMonth(), 0);
+    days += prevMonth.getDate();
+  }
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+
+  const parts = [];
+  if (years > 0) parts.push(`${years} year${years !== 1 ? 's' : ''}`);
+  if (months > 0) parts.push(`${months} month${months !== 1 ? 's' : ''}`);
+  if (days > 0 || parts.length === 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
+  return parts.join(', ');
+}
+
+function computeConsumptionSegments(entries) {
+  // entries must be sorted by date ASC, same vehicle
+  if (entries.length < 2) return [];
+
+  const segments = [];
+  let accumulatedFuel = 0;
+  let lastFullFillIndex = 0;
+
+  for (let i = 1; i < entries.length; i++) {
+    accumulatedFuel += entries[i].fuelAmount;
+    if (entries[i].partialFill) continue;
+
+    // Full fill — compute from last full fill
+    const distance = entries[i].odometer - entries[lastFullFillIndex].odometer;
+    if (distance > 0) {
+      segments.push({ fuel: accumulatedFuel, distance });
+    }
+    accumulatedFuel = 0;
+    lastFullFillIndex = i;
+  }
+  return segments;
+}
+
+function fmt(value, decimals = 2) {
+  if (value == null || !isFinite(value)) return '—';
+  return value.toFixed(decimals);
+}
+
+async function renderStats() {
+  const settings = loadSettings();
+  const allEntries = await getAllEntries(); // newest first
+  const vehicles = await getDistinctVehicles();
+  const vehicleSelect = document.getElementById('stats-vehicle');
+  const content = document.getElementById('stats-content');
+  const empty = document.getElementById('stats-empty');
+
+  // Populate vehicle filter (preserve selection)
+  const currentVal = vehicleSelect.value;
+  vehicleSelect.innerHTML = '<option value="all">All vehicles</option>' +
+    vehicles.map(v => `<option value="${v}">${v}</option>`).join('');
+  if (vehicles.includes(currentVal)) vehicleSelect.value = currentVal;
+
+  // Filter entries
+  let entries = [...allEntries].reverse(); // oldest first
+  const selectedVehicle = vehicleSelect.value;
+  if (selectedVehicle !== 'all') {
+    entries = entries.filter(e => e.vehicle === selectedVehicle);
+  }
+
+  if (entries.length === 0) {
+    content.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // Sort by date ASC (already reversed above), then by odometer for ties
+  entries.sort((a, b) => {
+    const d = a.date.localeCompare(b.date);
+    return d !== 0 ? d : a.odometer - b.odometer;
+  });
+
+  const unitLabel = settings.fuelUnit === 'litres' ? 'L' : 'gal';
+  const unitPer100 = settings.fuelUnit === 'litres' ? 'L/100km' : 'gal/100km';
+  const cur = settings.currency;
+
+  // Basic aggregates
+  const totalCost = entries.reduce((s, e) => s + (e.cost || 0), 0);
+  const totalFuel = entries.reduce((s, e) => s + (e.fuelAmount || 0), 0);
+  const minOdo = entries[0].odometer;
+  const maxOdo = entries[entries.length - 1].odometer;
+  const totalDistance = maxOdo - minOdo;
+  const firstDate = new Date(entries[0].date);
+  const lastDate = new Date(entries[entries.length - 1].date);
+  const totalDays = Math.max(1, (lastDate - firstDate) / (1000 * 60 * 60 * 24));
+  const totalTimeStr = entries.length > 1 ? formatDuration(entries[0].date, entries[entries.length - 1].date) : '—';
+
+  // Consumption segments
+  const segments = computeConsumptionSegments(entries);
+  const consumptions = segments.map(s => (s.fuel / s.distance) * 100);
+  const avgConsumption = consumptions.length > 0 ? consumptions.reduce((a, b) => a + b, 0) / consumptions.length : null;
+  const minConsumption = consumptions.length > 0 ? Math.min(...consumptions) : null;
+  const maxConsumption = consumptions.length > 0 ? Math.max(...consumptions) : null;
+  const lastConsumption = consumptions.length > 0 ? consumptions[consumptions.length - 1] : null;
+
+  // Cost per unit of fuel
+  const costPerUnits = entries.filter(e => e.fuelAmount > 0).map(e => e.cost / e.fuelAmount);
+  const avgCostPerUnit = costPerUnits.length > 0 ? costPerUnits.reduce((a, b) => a + b, 0) / costPerUnits.length : null;
+  const minCostPerUnit = costPerUnits.length > 0 ? Math.min(...costPerUnits) : null;
+  const maxCostPerUnit = costPerUnits.length > 0 ? Math.max(...costPerUnits) : null;
+  const lastCostPerUnit = costPerUnits.length > 0 ? costPerUnits[costPerUnits.length - 1] : null;
+
+  // Derived stats
+  const costPerKm = totalDistance > 0 ? totalCost / totalDistance : null;
+  const costPerFuelup = entries.length > 0 ? totalCost / entries.length : null;
+  const costPerDay = totalDays > 0 ? totalCost / totalDays : null;
+  const distPerDay = totalDays > 0 ? totalDistance / totalDays : null;
+  const fuelPerFuelup = entries.length > 0 ? totalFuel / entries.length : null;
+  const daysPerFuelup = entries.length > 1 ? totalDays / (entries.length - 1) : null;
+  const kmPerFuelup = entries.length > 1 ? totalDistance / (entries.length - 1) : null;
+  const fuelPerDay = totalDays > 0 ? totalFuel / totalDays : null;
+  const kmPerCost = totalCost > 0 ? totalDistance / totalCost : null;
+
+  const n = entries.length;
+
+  let html = '';
+
+  // Section 1: Running Costs
+  html += `<div class="stats-section">
+    <h2>Running Costs</h2>
+    <div class="stat-row"><span class="stat-label">Total fuel cost</span><span class="stat-value">${cur} ${fmt(totalCost)}</span></div>
+    <div class="stat-row"><span class="stat-label">Cost/day</span><span class="stat-value">${cur} ${fmt(costPerDay)}</span></div>
+    <div class="stat-row"><span class="stat-label">Cost/km</span><span class="stat-value">${cur} ${fmt(costPerKm, 3)}</span></div>
+    <div class="stat-row"><span class="stat-label">Distance/day</span><span class="stat-value">${fmt(distPerDay, 1)} km</span></div>
+  </div>`;
+
+  // Section 2: Distance & Time
+  html += `<div class="stats-section">
+    <h2>Distance &amp; Time</h2>
+    <div class="stat-row"><span class="stat-label">Total distance</span><span class="stat-value">${totalDistance.toLocaleString()} km</span></div>
+    <div class="stat-row"><span class="stat-label">Total time</span><span class="stat-value">${totalTimeStr}</span></div>
+  </div>`;
+
+  // Section 3: Fuel-Ups
+  html += `<div class="stats-section">
+    <h2>Fuel-Ups (${n})</h2>
+    <div class="stat-grid">
+      <div class="stat-pair"><div class="stat-row"><span class="stat-label">Avg ${unitPer100}</span><span class="stat-value">${fmt(avgConsumption)}</span></div><div class="stat-row"><span class="stat-label">Last ${unitPer100}</span><span class="stat-value">${fmt(lastConsumption)}</span></div></div>
+      <div class="stat-pair"><div class="stat-row"><span class="stat-label">Min ${unitPer100}</span><span class="stat-value">${fmt(minConsumption)}</span></div><div class="stat-row"><span class="stat-label">Max ${unitPer100}</span><span class="stat-value">${fmt(maxConsumption)}</span></div></div>
+      <div class="stat-pair"><div class="stat-row"><span class="stat-label">Avg cost/${unitLabel}</span><span class="stat-value">${cur} ${fmt(avgCostPerUnit, 3)}</span></div><div class="stat-row"><span class="stat-label">Last cost/${unitLabel}</span><span class="stat-value">${cur} ${fmt(lastCostPerUnit, 3)}</span></div></div>
+      <div class="stat-pair"><div class="stat-row"><span class="stat-label">Min cost/${unitLabel}</span><span class="stat-value">${cur} ${fmt(minCostPerUnit, 3)}</span></div><div class="stat-row"><span class="stat-label">Max cost/${unitLabel}</span><span class="stat-value">${cur} ${fmt(maxCostPerUnit, 3)}</span></div></div>
+      <div class="stat-pair"><div class="stat-row"><span class="stat-label">Cost/km</span><span class="stat-value">${cur} ${fmt(costPerKm, 3)}</span></div><div class="stat-row"><span class="stat-label">Cost/fuelup</span><span class="stat-value">${cur} ${fmt(costPerFuelup)}</span></div></div>
+      <div class="stat-pair"><div class="stat-row"><span class="stat-label">Cost/day</span><span class="stat-value">${cur} ${fmt(costPerDay)}</span></div><div class="stat-row"><span class="stat-label">Km/${cur}</span><span class="stat-value">${fmt(kmPerCost, 1)}</span></div></div>
+      <div class="stat-pair"><div class="stat-row"><span class="stat-label">${unitLabel}/fuelup</span><span class="stat-value">${fmt(fuelPerFuelup, 1)}</span></div><div class="stat-row"><span class="stat-label">Days/fuelup</span><span class="stat-value">${fmt(daysPerFuelup, 1)}</span></div></div>
+      <div class="stat-pair"><div class="stat-row"><span class="stat-label">Km/fuelup</span><span class="stat-value">${fmt(kmPerFuelup, 1)}</span></div><div class="stat-row"><span class="stat-label">${unitLabel}/day</span><span class="stat-value">${fmt(fuelPerDay, 2)}</span></div></div>
+      <div class="stat-pair"><div class="stat-row"><span class="stat-label">Total cost</span><span class="stat-value">${cur} ${fmt(totalCost)}</span></div><div class="stat-row"><span class="stat-label">Total ${unitLabel}</span><span class="stat-value">${fmt(totalFuel, 1)}</span></div></div>
+    </div>
+  </div>`;
+
+  content.innerHTML = html;
+}
+
+function setupStats() {
+  document.getElementById('stats-vehicle').addEventListener('change', () => {
+    renderStats();
+  });
+}
+
 // ===== Settings Screen =====
 async function loadSettingsScreen() {
   const settings = loadSettings();
@@ -407,6 +587,7 @@ function init() {
   setupHistory();
   setupImportExport();
   setupSettings();
+  setupStats();
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js');

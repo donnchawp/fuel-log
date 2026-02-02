@@ -109,6 +109,13 @@ export async function importEntries(entries, overwrite = false) {
   return results;
 }
 
+export async function getDistinctVehicles() {
+  const db = await getDb();
+  const entries = await db.getAll(STORE_NAME);
+  const vehicles = [...new Set(entries.map(e => e.vehicle).filter(Boolean))];
+  return vehicles.sort((a, b) => a.localeCompare(b));
+}
+
 export async function estimateStorageUsage() {
   if (navigator.storage && navigator.storage.estimate) {
     const { usage, quota } = await navigator.storage.estimate();

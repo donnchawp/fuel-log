@@ -126,6 +126,19 @@
       <div id="import-results" class="text-sm text-secondary mt-8" style="display:none"></div>
     </section>
 
+    <section id="screen-stats" class="screen">
+      <h1>Statistics</h1>
+      <div class="mt-16">
+        <div class="form-group">
+          <select id="stats-vehicle">
+            <option value="all">All vehicles</option>
+          </select>
+        </div>
+      </div>
+      <div id="stats-content"></div>
+      <p id="stats-empty" class="text-center text-secondary mt-16" style="display:none">No entries yet. Start logging fuel to see statistics!</p>
+    </section>
+
     <section id="screen-settings" class="screen">
       <h1>Settings</h1>
       <div class="mt-16">
@@ -178,6 +191,12 @@
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
       </svg>
       Import/Export
+    </a>
+    <a href="#/stats">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="12" width="4" height="9"/><rect x="10" y="7" width="4" height="14"/><rect x="17" y="3" width="4" height="18"/>
+      </svg>
+      Stats
     </a>
     <a href="#/settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

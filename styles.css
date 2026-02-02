@@ -241,6 +241,49 @@ button {
   max-width: 180px;
 }
 
+/* ===== Stats ===== */
+.stats-section {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.stats-section:last-child {
+  border-bottom: none;
+}
+
+.stats-section h2 {
+  margin-bottom: 12px;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.stat-value {
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-align: right;
+}
+
+.stat-grid {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 16px;
+}
+
 /* ===== Utility ===== */
 .mt-8 { margin-top: 8px; }
 .mt-16 { margin-top: 16px; }

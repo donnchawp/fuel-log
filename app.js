@@ -1,6 +1,7 @@
 // app.js
 import { loadSettings, applyTheme, initThemeListener } from './settings.js';
 import { addEntry, updateEntry, getEntry, getAllEntries, deleteEntries } from './db.js';
+import { exportJSON, exportCSV, parseJSONImport, parseCSVImport, getExportEntries, importEntries } from './import-export.js';
 
 const routes = {
   '/': 'screen-entry',
@@ -209,6 +210,103 @@ function setupHistory() {
   });
 }
 
+// ===== Import/Export Screen =====
+let parsedImportEntries = [];
+
+function setupImportExport() {
+  const scopeSelect = document.getElementById('export-scope');
+  const dateRangeDiv = document.getElementById('export-date-range');
+  const vehicleDiv = document.getElementById('export-vehicle-input');
+
+  scopeSelect.addEventListener('change', () => {
+    dateRangeDiv.style.display = scopeSelect.value === 'dateRange' ? '' : 'none';
+    vehicleDiv.style.display = scopeSelect.value === 'vehicle' ? '' : 'none';
+  });
+
+  // Export button
+  document.getElementById('export-btn').addEventListener('click', async () => {
+    const format = document.getElementById('export-format').value;
+    const scope = scopeSelect.value;
+    const opts = {
+      vehicle: document.getElementById('export-vehicle').value.trim(),
+      startDate: document.getElementById('export-start').value,
+      endDate: document.getElementById('export-end').value,
+    };
+
+    const entries = await getExportEntries(scope, opts);
+    if (entries.length === 0) {
+      showToast('No entries to export');
+      return;
+    }
+
+    if (format === 'json') {
+      await exportJSON(entries);
+    } else {
+      await exportCSV(entries);
+    }
+    showToast(`Exported ${entries.length} entries`);
+  });
+
+  // File input
+  const fileInput = document.getElementById('import-file');
+  const preview = document.getElementById('import-preview');
+  const importBtn = document.getElementById('import-btn');
+  const results = document.getElementById('import-results');
+
+  fileInput.addEventListener('change', async () => {
+    parsedImportEntries = [];
+    preview.style.display = 'none';
+    results.style.display = 'none';
+    importBtn.disabled = true;
+
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    const text = await file.text();
+    try {
+      if (file.name.endsWith('.json')) {
+        parsedImportEntries = parseJSONImport(text);
+      } else if (file.name.endsWith('.csv')) {
+        parsedImportEntries = parseCSVImport(text);
+      } else {
+        showToast('Unsupported file type');
+        return;
+      }
+
+      if (parsedImportEntries.length === 0) {
+        preview.textContent = 'No valid entries found in file.';
+        preview.style.display = 'block';
+        return;
+      }
+
+      const dates = parsedImportEntries.map(e => e.date).filter(Boolean).sort();
+      const dateRange = dates.length > 0
+        ? `${formatDate(dates[0])} to ${formatDate(dates[dates.length - 1])}`
+        : 'unknown dates';
+      preview.textContent = `Found ${parsedImportEntries.length} entries (${dateRange})`;
+      preview.style.display = 'block';
+      importBtn.disabled = false;
+    } catch (err) {
+      preview.textContent = `Error parsing file: ${err.message}`;
+      preview.style.display = 'block';
+    }
+  });
+
+  // Import button
+  importBtn.addEventListener('click', async () => {
+    if (parsedImportEntries.length === 0) return;
+    const overwrite = document.getElementById('import-overwrite').checked;
+    const res = await importEntries(parsedImportEntries, overwrite);
+    results.textContent = `Added: ${res.added}, Skipped: ${res.skipped}, Overwritten: ${res.overwritten}`;
+    results.style.display = 'block';
+    showToast(`Imported ${res.added} entries`);
+    // Reset
+    parsedImportEntries = [];
+    fileInput.value = '';
+    importBtn.disabled = true;
+  });
+}
+
 // Initialize
 function init() {
   const settings = loadSettings();
@@ -217,6 +315,7 @@ function init() {
 
   setupEntryForm();
   setupHistory();
+  setupImportExport();
 
   window.addEventListener('hashchange', navigate);
   navigate();

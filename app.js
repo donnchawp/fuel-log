@@ -359,6 +359,10 @@ function init() {
   setupImportExport();
   setupSettings();
 
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js');
+  }
+
   window.addEventListener('hashchange', navigate);
   navigate();
 }

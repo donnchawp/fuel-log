@@ -59,6 +59,12 @@
 
     <section id="screen-history" class="screen">
       <h1>History</h1>
+      <div class="history-toolbar mt-16" style="display:flex;justify-content:flex-end;gap:8px;">
+        <button id="history-select-btn" class="btn-secondary text-sm">Select</button>
+        <button id="history-delete-btn" class="btn-danger text-sm" style="display:none">Delete Selected</button>
+      </div>
+      <ul id="history-list" class="entry-list mt-8"></ul>
+      <p id="history-empty" class="text-center text-secondary mt-16" style="display:none">No entries yet. Start logging fuel!</p>
     </section>
 
     <section id="screen-import-export" class="screen">

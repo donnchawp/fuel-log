@@ -19,12 +19,19 @@ function navigate() {
   const screenId = routes[path];
 
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.bottom-nav a').forEach(a => a.classList.remove('active'));
+  document.querySelectorAll('.bottom-nav a').forEach(a => {
+    a.classList.remove('active');
+    a.removeAttribute('aria-current');
+  });
 
   if (screenId) {
     document.getElementById(screenId)?.classList.add('active');
   }
-  document.querySelector(`.bottom-nav a[href="#${path}"]`)?.classList.add('active');
+  const activeLink = document.querySelector(`.bottom-nav a[href="#${path}"]`);
+  if (activeLink) {
+    activeLink.classList.add('active');
+    activeLink.setAttribute('aria-current', 'page');
+  }
 
   // Handle history screen
   if (path === '/history') {

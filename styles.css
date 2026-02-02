@@ -248,3 +248,35 @@ button {
 .text-center { text-align: center; }
 .text-secondary { color: var(--text-secondary); }
 .text-sm { font-size: 0.875rem; }
+
+/* ===== Focus Visible ===== */
+button:focus-visible,
+.bottom-nav a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ===== High Contrast ===== */
+@media (prefers-contrast: more) {
+  :root {
+    --border: #999999;
+    --text-secondary: #444444;
+  }
+
+  [data-theme="dark"] {
+    --border: #888888;
+    --text-secondary: #bbbbbb;
+  }
+
+  input, select, textarea {
+    border-width: 2px;
+  }
+
+  .entry-item {
+    border-bottom-width: 2px;
+  }
+
+  .setting-row {
+    border-bottom-width: 2px;
+  }
+}
